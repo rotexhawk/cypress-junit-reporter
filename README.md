@@ -1,42 +1,41 @@
-# JUnit Reporter for Mocha
+# JUnit Reporter for Cypress
 
-[![Build Status](https://travis-ci.org/michaelleeallen/mocha-junit-reporter.svg?branch=master)](https://travis-ci.org/michaelleeallen/mocha-junit-reporter)
-[![npm](https://img.shields.io/npm/v/mocha-junit-reporter.svg?maxAge=2592000)](https://www.npmjs.com/package/mocha-junit-reporter)
+[![npm](https://img.shields.io/npm/v/cypress-junit-reporter.svg?maxAge=2592000)](https://www.npmjs.com/package/cypress-junit-reporter)
 
 Produces JUnit-style XML test results.
 
 ## Installation
 
 ```shell
-$ npm install mocha-junit-reporter --save-dev
+$ npm install cypress-junit-reporter --save-dev
 ```
 
 or as a global module
 ```shell
-$ npm install -g mocha-junit-reporter
+$ npm install -g cypress-junit-reporter
 ```
 
 ## Usage
-Run mocha with `mocha-junit-reporter`:
+Run mocha with `cypress-junit-reporter`:
 
 ```shell
-$ mocha test --reporter mocha-junit-reporter
+$ mocha test --reporter cypress-junit-reporter
 ```
 This will output a results file at `./test-results.xml`.
 You may optionally declare an alternate location for results XML file by setting
 the environment variable `MOCHA_FILE` or specifying `mochaFile` in `reporterOptions`:
 
 ```shell
-$ MOCHA_FILE=./path_to_your/file.xml mocha test --reporter mocha-junit-reporter
+$ MOCHA_FILE=./path_to_your/file.xml mocha test --reporter cypress-junit-reporter
 ```
 or
 ```shell
-$ mocha test --reporter mocha-junit-reporter --reporter-options mochaFile=./path_to_your/file.xml
+$ mocha test --reporter cypress-junit-reporter --reporter-options mochaFile=./path_to_your/file.xml
 ```
 or
 ```javascript
 var mocha = new Mocha({
-    reporter: 'mocha-junit-reporter',
+    reporter: 'cypress-junit-reporter',
     reporterOptions: {
         mochaFile: './path_to_your/file.xml'
     }
@@ -62,12 +61,12 @@ You can also add properties to the report under `testsuite`. This is useful if y
 
 To do so pass them in via env variable:
 ```shell
-PROPERTIES=BUILD_ID:4291 mocha test --reporter mocha-junit-reporter
+PROPERTIES=BUILD_ID:4291 mocha test --reporter cypress-junit-reporter
 ```
 or
 ```javascript
 var mocha = new Mocha({
-    reporter: 'mocha-junit-reporter',
+    reporter: 'cypress-junit-reporter',
     reporterOptions: {
         properties: {
             BUILD_ID: 4291
@@ -78,12 +77,12 @@ var mocha = new Mocha({
 
 ### Results Report
 
-Results XML filename can contain `[hash]`, e.g. `./path_to_your/test-results.[hash].xml`. `[hash]` is replaced by MD5 hash of test results XML. This enables support of parallel execution of multiple `mocha-junit-reporter`'s writing test results in separate files.
+Results XML filename can contain `[hash]`, e.g. `./path_to_your/test-results.[hash].xml`. `[hash]` is replaced by MD5 hash of test results XML. This enables support of parallel execution of multiple `cypress-junit-reporter`'s writing test results in separate files.
 
 In order to display full suite title (including parents) just specify `testsuitesTitle` option
 ```javascript
 var mocha = new Mocha({
-    reporter: 'mocha-junit-reporter',
+    reporter: 'cypress-junit-reporter',
     reporterOptions: {
         testsuitesTitle: true,
         suiteTitleSeparatedBy: '.' // suites separator, default is space (' ')
@@ -95,7 +94,7 @@ If you want to **switch classname and name** of the generated testCase XML entri
 
 ```javascript
 var mocha = new Mocha({
-    reporter: 'mocha-junit-reporter',
+    reporter: 'cypress-junit-reporter',
     reporterOptions: {
         testCaseSwitchClassnameAndName: true
     }

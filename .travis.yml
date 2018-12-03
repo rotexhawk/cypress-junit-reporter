@@ -10,4 +10,4 @@ deploy:
   on:
     branch: master
     tags: true
-    repo: michaelleeallen/mocha-junit-reporter
+    repo: DKnA/cypress-junit-reporter
