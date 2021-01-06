@@ -254,7 +254,6 @@ CypressJUnitReporter.prototype.getTestsuiteData = function (suite) {
  * @returns {object}
  */
 CypressJUnitReporter.prototype.getTestcaseData = function (test, file, err) {
-  console.log("file", file);
   var flipClassAndName = this._options.testCaseSwitchClassnameAndName;
   var name = stripAnsi(test.fullTitle());
   var classname = file;
