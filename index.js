@@ -117,6 +117,11 @@ function CypressJUnitReporter(runner, options) {
     return testsuites[testsuites.length - 1].testsuite;
   }
 
+  function getSpecFile() {
+    const suite = testsuites[0].testsuite[0];
+    return suite._attr.file;
+  }
+
   function lastTestCase() {
     const testsuite = lastSuite();
     return testsuite[testsuite.length - 1];
@@ -148,14 +153,14 @@ function CypressJUnitReporter(runner, options) {
   this._runner.on(
     "pass",
     function (test) {
-      lastSuite().push(this.getTestcaseData(test, lastSuite()));
+      lastSuite().push(this.getTestcaseData(test, getSpecFile()));
     }.bind(this)
   );
 
   this._runner.on(
     "fail",
     function (test, err) {
-      const testcaseData = this.getTestcaseData(test, lastSuite(), err);
+      const testcaseData = this.getTestcaseData(test, getSpecFile(), err);
       if (
         testcaseData.testcase[0]._attr.name.includes("after each") ||
         testcaseData.testcase[0]._attr.name.includes("after all")
@@ -194,7 +199,7 @@ function CypressJUnitReporter(runner, options) {
     this._runner.on(
       "pending",
       function (test) {
-        var testcase = this.getTestcaseData(test, lastSuite());
+        var testcase = this.getTestcaseData(test, getSpecFile());
 
         testcase.testcase.push({ skipped: null });
         lastSuite().push(testcase);
@@ -229,7 +234,6 @@ CypressJUnitReporter.prototype.getTestsuiteData = function (suite) {
   };
 
   if (suite.file) {
-    console.log("this has nothing too");
     testSuite.testsuite[0]._attr.file = suite.file;
   }
 
@@ -249,14 +253,11 @@ CypressJUnitReporter.prototype.getTestsuiteData = function (suite) {
  * @param {object} err - if test failed, the failure object
  * @returns {object}
  */
-CypressJUnitReporter.prototype.getTestcaseData = function (test, suites, err) {
+CypressJUnitReporter.prototype.getTestcaseData = function (test, file, err) {
+  console.log("file", file);
   var flipClassAndName = this._options.testCaseSwitchClassnameAndName;
   var name = stripAnsi(test.fullTitle());
-  const suite = suites[0];
-  const {
-    _attr: { file: suiteName },
-  } = suite;
-  var classname = stripAnsi(suiteName);
+  var classname = file;
   var config = {
     testcase: [
       {
@@ -332,7 +333,6 @@ CypressJUnitReporter.prototype.getXml = function (testsuites) {
 
   testsuites.forEach(function (suite) {
     var _suiteAttr = suite.testsuite[0]._attr;
-    console.log("test suites", _suiteAttr);
     // properties are added before test cases so we want to make sure that we are grabbing test cases
     // at the correct index
     var _casesIndex = hasProperties ? 2 : 1;
@@ -344,7 +344,6 @@ CypressJUnitReporter.prototype.getXml = function (testsuites) {
 
     _cases.forEach(function (testcase) {
       var lastNode = testcase.testcase[testcase.testcase.length - 1];
-
       _suiteAttr.skipped += Number("skipped" in lastNode);
       _suiteAttr.failures += Number("failure" in lastNode);
       _suiteAttr.time += testcase.testcase[0]._attr.time;
