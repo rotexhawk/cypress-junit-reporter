@@ -1,37 +1,43 @@
-'use-strict';
+"use-strict";
 
-var xml = require('xml');
-var Base = require('mocha').reporters.Base;
-var fs = require('fs');
-var path = require('path');
-var debug = require('debug')('mocha-junit-reporter');
-var mkdirp = require('mkdirp');
-var md5 = require('md5');
-var stripAnsi = require('strip-ansi');
+var xml = require("xml");
+var Base = require("mocha").reporters.Base;
+var fs = require("fs");
+var path = require("path");
+var debug = require("debug")("mocha-junit-reporter");
+var mkdirp = require("mkdirp");
+var md5 = require("md5");
+var stripAnsi = require("strip-ansi");
 
 module.exports = CypressJUnitReporter;
 
 // A subset of invalid characters as defined in http://www.w3.org/TR/xml/#charsets that can occur in e.g. stacktraces
-var INVALID_CHARACTERS = ['\u001b'];
+var INVALID_CHARACTERS = ["\u001b"];
 
 function configureDefaults(options) {
   debug(options);
   options = options || {};
   options = options.reporterOptions || {};
-  options.mochaFile = options.mochaFile || process.env.MOCHA_FILE || 'test-results.xml';
-  options.properties = options.properties || parsePropertiesFromEnv(process.env.PROPERTIES) || null;
+  options.mochaFile =
+    options.mochaFile || process.env.MOCHA_FILE || "test-results.xml";
+  options.properties =
+    options.properties ||
+    parsePropertiesFromEnv(process.env.PROPERTIES) ||
+    null;
   options.toConsole = !!options.toConsole;
-  options.testCaseSwitchClassnameAndName = options.testCaseSwitchClassnameAndName || false;
-  options.suiteTitleSeparedBy = options.suiteTitleSeparedBy || ' ';
-  options.suiteTitleSeparatedBy = options.suiteTitleSeparatedBy || options.suiteTitleSeparedBy || ' ';
-  options.rootSuiteTitle = options.rootSuiteTitle || 'Root Suite';
-  options.testsuitesTitle = options.testsuitesTitle || 'Mocha Tests';
+  options.testCaseSwitchClassnameAndName =
+    options.testCaseSwitchClassnameAndName || false;
+  options.suiteTitleSeparedBy = options.suiteTitleSeparedBy || " ";
+  options.suiteTitleSeparatedBy =
+    options.suiteTitleSeparatedBy || options.suiteTitleSeparedBy || " ";
+  options.rootSuiteTitle = options.rootSuiteTitle || "Root Suite";
+  options.testsuitesTitle = options.testsuitesTitle || "Mocha Tests";
 
   return options;
 }
 
 function defaultSuiteTitle(suite) {
-  if (suite.root && suite.title === '') {
+  if (suite.root && suite.title === "") {
     return stripAnsi(this._options.rootSuiteTitle);
   }
   return stripAnsi(suite.title);
@@ -42,7 +48,7 @@ function fullSuiteTitle(suite) {
   var title = [suite.title];
 
   while (parent) {
-    if (parent.root && parent.title === '') {
+    if (parent.root && parent.title === "") {
       title.unshift(this._options.rootSuiteTitle);
     } else {
       title.unshift(parent.title);
@@ -54,7 +60,10 @@ function fullSuiteTitle(suite) {
 }
 
 function isInvalidSuite(suite) {
-  return (!suite.root && suite.title === '') || (suite.tests.length === 0 && suite.suites.length === 0);
+  return (
+    (!suite.root && suite.title === "") ||
+    (suite.tests.length === 0 && suite.suites.length === 0)
+  );
 }
 
 function parsePropertiesFromEnv(envValue) {
@@ -62,9 +71,9 @@ function parsePropertiesFromEnv(envValue) {
 
   if (envValue) {
     properties = {};
-    var propertiesArray = envValue.split(',');
+    var propertiesArray = envValue.split(",");
     for (var i = 0; i < propertiesArray.length; i++) {
-      var propertyArgs = propertiesArray[i].split(':');
+      var propertyArgs = propertiesArray[i].split(":");
       properties[propertyArgs[0]] = propertyArgs[1];
     }
   }
@@ -80,9 +89,9 @@ function generateProperties(options) {
         property: {
           _attr: {
             name: propertyName,
-            value: options.properties[propertyName]
-          }
-        }
+            value: options.properties[propertyName],
+          },
+        },
       });
     }
   }
@@ -98,7 +107,9 @@ function generateProperties(options) {
 function CypressJUnitReporter(runner, options) {
   this._options = configureDefaults(options);
   this._runner = runner;
-  this._generateSuiteTitle = this._options.useFullSuiteTitle ? fullSuiteTitle : defaultSuiteTitle;
+  this._generateSuiteTitle = this._options.useFullSuiteTitle
+    ? fullSuiteTitle
+    : defaultSuiteTitle;
 
   var testsuites = [];
 
@@ -115,55 +126,88 @@ function CypressJUnitReporter(runner, options) {
   Base.call(this, runner);
 
   // remove old results
-  this._runner.on('start', function () {
-    if (fs.existsSync(this._options.mochaFile)) {
-      debug('removing report file', this._options.mochaFile);
-      fs.unlinkSync(this._options.mochaFile);
-    }
-  }.bind(this));
+  this._runner.on(
+    "start",
+    function () {
+      if (fs.existsSync(this._options.mochaFile)) {
+        debug("removing report file", this._options.mochaFile);
+        fs.unlinkSync(this._options.mochaFile);
+      }
+    }.bind(this)
+  );
 
-  this._runner.on('suite', function (suite) {
-    if (!isInvalidSuite(suite)) {
-      testsuites.push(this.getTestsuiteData(suite));
-    }
-  }.bind(this));
+  this._runner.on(
+    "suite",
+    function (suite, ...rest) {
+      if (!isInvalidSuite(suite)) {
+        testsuites.push(this.getTestsuiteData(suite));
+      }
+    }.bind(this)
+  );
 
-  this._runner.on('pass', function (test) {
-    lastSuite().push(this.getTestcaseData(test));
-  }.bind(this));
+  this._runner.on(
+    "pass",
+    function (test) {
+      lastSuite().push(this.getTestcaseData(test, lastSuite()));
+    }.bind(this)
+  );
 
-  this._runner.on('fail', function (test, err) {
-    const testcaseData = this.getTestcaseData(test, err);
-    if (testcaseData.testcase[0]._attr.name.includes('after each') || testcaseData.testcase[0]._attr.name.includes('after all')) {
-      lastTestCase().testcase[0]._attr.failure = true;
-      lastTestCase().testcase[0]._attr.error = true;
-      lastTestCase().testcase[0]._attr.success = false;
-      lastTestCase().testcase.push(testcaseData.testcase[1])
-    } else if (testcaseData.testcase[0]._attr.name.includes('before each')) {
-      testcaseData.testcase[0]._attr.name = testcaseData.testcase[0]._attr.name.replace("\"before each\" hook for \"", "");
-      testcaseData.testcase[0]._attr.name = testcaseData.testcase[0]._attr.name.substring(0, testcaseData.testcase[0]._attr.name.length - 2);
-      lastSuite().push(testcaseData);
-    } else if (testcaseData.testcase[0]._attr.name.includes('before all')) {
-      testcaseData.testcase[0]._attr.name = testcaseData.testcase[0]._attr.name.replace("\"before all\" hook for \"", "");
-      testcaseData.testcase[0]._attr.name = testcaseData.testcase[0]._attr.name.substring(0, testcaseData.testcase[0]._attr.name.length - 2);
-      lastSuite().push(testcaseData);
-    } else {
-      lastSuite().push(testcaseData);
-    }
-  }.bind(this));
+  this._runner.on(
+    "fail",
+    function (test, err) {
+      const testcaseData = this.getTestcaseData(test, lastSuite(), err);
+      if (
+        testcaseData.testcase[0]._attr.name.includes("after each") ||
+        testcaseData.testcase[0]._attr.name.includes("after all")
+      ) {
+        lastTestCase().testcase[0]._attr.failure = true;
+        lastTestCase().testcase[0]._attr.error = true;
+        lastTestCase().testcase[0]._attr.success = false;
+        lastTestCase().testcase.push(testcaseData.testcase[1]);
+      } else if (testcaseData.testcase[0]._attr.name.includes("before each")) {
+        testcaseData.testcase[0]._attr.name = testcaseData.testcase[0]._attr.name.replace(
+          '"before each" hook for "',
+          ""
+        );
+        testcaseData.testcase[0]._attr.name = testcaseData.testcase[0]._attr.name.substring(
+          0,
+          testcaseData.testcase[0]._attr.name.length - 2
+        );
+        lastSuite().push(testcaseData);
+      } else if (testcaseData.testcase[0]._attr.name.includes("before all")) {
+        testcaseData.testcase[0]._attr.name = testcaseData.testcase[0]._attr.name.replace(
+          '"before all" hook for "',
+          ""
+        );
+        testcaseData.testcase[0]._attr.name = testcaseData.testcase[0]._attr.name.substring(
+          0,
+          testcaseData.testcase[0]._attr.name.length - 2
+        );
+        lastSuite().push(testcaseData);
+      } else {
+        lastSuite().push(testcaseData);
+      }
+    }.bind(this)
+  );
 
   if (this._options.includePending) {
-    this._runner.on('pending', function (test) {
-      var testcase = this.getTestcaseData(test);
+    this._runner.on(
+      "pending",
+      function (test) {
+        var testcase = this.getTestcaseData(test, lastSuite());
 
-      testcase.testcase.push({ skipped: null });
-      lastSuite().push(testcase);
-    }.bind(this));
+        testcase.testcase.push({ skipped: null });
+        lastSuite().push(testcase);
+      }.bind(this)
+    );
   }
 
-  this._runner.on('end', function () {
-    this.flush(testsuites);
-  }.bind(this));
+  this._runner.on(
+    "end",
+    function () {
+      this.flush(testsuites);
+    }.bind(this)
+  );
 }
 
 /**
@@ -178,20 +222,21 @@ CypressJUnitReporter.prototype.getTestsuiteData = function (suite) {
         _attr: {
           name: this._generateSuiteTitle(suite),
           timestamp: new Date().toISOString().slice(0, -5),
-          tests: suite.tests.length
-        }
-      }
-    ]
+          tests: suite.tests.length,
+        },
+      },
+    ],
   };
 
   if (suite.file) {
+    console.log("this has nothing too");
     testSuite.testsuite[0]._attr.file = suite.file;
   }
 
   var properties = generateProperties(this._options);
   if (properties.length) {
     testSuite.testsuite.push({
-      properties: properties
+      properties: properties,
     });
   }
 
@@ -204,39 +249,45 @@ CypressJUnitReporter.prototype.getTestsuiteData = function (suite) {
  * @param {object} err - if test failed, the failure object
  * @returns {object}
  */
-CypressJUnitReporter.prototype.getTestcaseData = function (test, err) {
+CypressJUnitReporter.prototype.getTestcaseData = function (test, suites, err) {
   var flipClassAndName = this._options.testCaseSwitchClassnameAndName;
   var name = stripAnsi(test.fullTitle());
-  var classname = stripAnsi(test.title)
+  const suite = suites[0];
+  const {
+    _attr: { file: suiteName },
+  } = suite;
+  var classname = stripAnsi(suiteName);
   var config = {
-    testcase: [{
-      _attr: {
-        name: flipClassAndName ? classname : name,
-        time: (typeof test.duration === 'undefined') ? 0 : test.duration / 1000,
-        classname: flipClassAndName ? name : classname,
-        failure: !!err,
-        error: !!err,
-        success: !err
-      }
-    }]
+    testcase: [
+      {
+        _attr: {
+          name: flipClassAndName ? classname : name,
+          time: typeof test.duration === "undefined" ? 0 : test.duration / 1000,
+          classname: flipClassAndName ? name : classname,
+          failure: !!err,
+          error: !!err,
+          success: !err,
+        },
+      },
+    ],
   };
 
   if (err) {
     var message;
-    if (err.message && typeof err.message.toString === 'function') {
-      message = err.message + '';
-    } else if (typeof err.inspect === 'function') {
-      message = err.inspect() + '';
+    if (err.message && typeof err.message.toString === "function") {
+      message = err.message + "";
+    } else if (typeof err.inspect === "function") {
+      message = err.inspect() + "";
     } else {
-      message = '';
+      message = "";
     }
     var failureMessage = err.stack || message;
     var failureElement = {
       _attr: {
-        message: err.message || '',
-        type: err.name || ''
+        message: err.message || "",
+        type: err.name || "",
       },
-      _cdata: this.removeInvalidCharacters(failureMessage)
+      _cdata: this.removeInvalidCharacters(failureMessage),
     };
 
     config.testcase.push({ failure: failureElement });
@@ -250,7 +301,7 @@ CypressJUnitReporter.prototype.getTestcaseData = function (test, err) {
  */
 CypressJUnitReporter.prototype.removeInvalidCharacters = function (input) {
   return INVALID_CHARACTERS.reduce(function (text, invalidCharacter) {
-    return text.replace(new RegExp(invalidCharacter, 'g'), '');
+    return text.replace(new RegExp(invalidCharacter, "g"), "");
   }, input);
 };
 
@@ -268,7 +319,6 @@ CypressJUnitReporter.prototype.flush = function (testsuites) {
   }
 };
 
-
 /**
  * Produces an XML string from the given test data.
  * @param {Array.<Object>} testsuites - a list of xml configs
@@ -282,6 +332,7 @@ CypressJUnitReporter.prototype.getXml = function (testsuites) {
 
   testsuites.forEach(function (suite) {
     var _suiteAttr = suite.testsuite[0]._attr;
+    console.log("test suites", _suiteAttr);
     // properties are added before test cases so we want to make sure that we are grabbing test cases
     // at the correct index
     var _casesIndex = hasProperties ? 2 : 1;
@@ -294,8 +345,8 @@ CypressJUnitReporter.prototype.getXml = function (testsuites) {
     _cases.forEach(function (testcase) {
       var lastNode = testcase.testcase[testcase.testcase.length - 1];
 
-      _suiteAttr.skipped += Number('skipped' in lastNode);
-      _suiteAttr.failures += Number('failure' in lastNode);
+      _suiteAttr.skipped += Number("skipped" in lastNode);
+      _suiteAttr.failures += Number("failure" in lastNode);
       _suiteAttr.time += testcase.testcase[0]._attr.time;
     });
 
@@ -312,17 +363,20 @@ CypressJUnitReporter.prototype.getXml = function (testsuites) {
       name: this._options.testsuitesTitle,
       time: totalSuitesTime,
       tests: totalTests,
-      failures: stats.failures
-    }
+      failures: stats.failures,
+    },
   };
 
   if (stats.pending) {
     rootSuite._attr.skipped = stats.pending;
   }
 
-  return xml({
-    testsuites: [rootSuite].concat(testsuites)
-  }, { declaration: true, indent: '  ' });
+  return xml(
+    {
+      testsuites: [rootSuite].concat(testsuites),
+    },
+    { declaration: true, indent: "  " }
+  );
 };
 
 /**
@@ -332,18 +386,18 @@ CypressJUnitReporter.prototype.getXml = function (testsuites) {
  */
 CypressJUnitReporter.prototype.writeXmlToDisk = function (xml, filePath) {
   if (filePath) {
-    if (filePath.indexOf('[hash]') !== -1) {
-      filePath = filePath.replace('[hash]', md5(xml));
+    if (filePath.indexOf("[hash]") !== -1) {
+      filePath = filePath.replace("[hash]", md5(xml));
     }
 
-    debug('writing file to', filePath);
+    debug("writing file to", filePath);
     mkdirp.sync(path.dirname(filePath));
 
     try {
-      fs.writeFileSync(filePath, xml, 'utf-8');
+      fs.writeFileSync(filePath, xml, "utf-8");
     } catch (exc) {
-      debug('problem writing results: ' + exc);
+      debug("problem writing results: " + exc);
     }
-    debug('results written successfully');
+    debug("results written successfully");
   }
 };
